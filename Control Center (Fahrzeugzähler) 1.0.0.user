@@ -1,0 +1,645 @@
+// ==UserScript==
+// @name               Control Center (Fahrzeugzähler)
+// @namespace          https://leitstellenspiel.de/bielefeld
+// @version            5.8
+// @icon               https://www.leitstellenspiel.de/favicon.ico
+// @license            Design by Bobelle
+// @author             Design by Bobelle
+// @description        Fahrzeugzähler: Mehr Abstand zwischen Icon & Text. Emojis, Eckig, Trigger unten links.
+// @match              https://www.leitstellenspiel.de/*
+// @match              https://leitstellenspiel.de/*
+// @match              https://www.missionchief.com/*
+// @match              https://missionchief.com/*
+// @match              https://www.meldkamerspel.com/*
+// @grant              GM_setValue
+// @grant              GM_getValue
+// @grant              GM_addStyle
+// @run-at             document-idle
+// ==/UserScript==
+
+(() => {
+    "use strict";
+
+    // ---------------------------------------------------------
+    // 0. ICONS (Emojis)
+    // ---------------------------------------------------------
+    const ICONS = {
+        patient: "👨‍🍼",
+        prisoner: "👮",
+        alarm:   "🧑‍🚒"
+    };
+
+    // ---------------------------------------------------------
+    // 1. PRÜFUNG FÜR UI-ANZEIGE (ULTRA STRENG)
+    // ---------------------------------------------------------
+    const path = window.location.pathname;
+
+    const isMissionView = document.getElementById("mission_header") !== null ||
+                          document.querySelector(".mission_header_info") !== null ||
+                          document.getElementById("building_main_header") !== null;
+
+    const isSubUrl = path.includes("/missions/") ||
+                     path.includes("/buildings/") ||
+                     path.includes("/vehicles/") ||
+                     path.includes("/alliance/") ||
+                     path.includes("/profile/");
+
+    const isMainPage = document.getElementById("mission_list") !== null &&
+                       !isMissionView &&
+                       !isSubUrl &&
+                       (path === "/" || path === "/index" || path === "/#" || path.length < 2);
+
+    // ---------------------------------------------------------
+    // 2. KONFIGURATION & SPEICHER
+    // ---------------------------------------------------------
+
+    const STORAGE = {
+        COUNTS_TODAY: "fz_v7_counts_today",
+        COUNTS_TOTAL: "fz_v7_counts_total",
+        DETAILS_TODAY: "fz_v7_details",
+        YDAY_COUNTS: "fz_v7_yday",
+        DAYSTAMP: "fz_v7_daystamp",
+        UISETTINGS: "fz_final_ui_settings_v4_0",
+        SYNC_SIGNAL: "fz_v7_sync_signal",
+        DAILY_STATS: "lss_daily_mission_counter"
+    };
+
+    const CFG = {
+        zIndex: 99999
+    };
+
+    const DEFAULTS = {
+        columns: 6,
+        autoHideSeconds: 50,
+        clickIncrement: 1,
+        winMaxHeight: 750,
+        winTop: 60,
+        winBg: "#ffffff",
+        winBorderC: "#ff0000",
+        winBorderW: 2,
+        winRadius: 0,
+        headBg: "#ffffff",
+        headColor: "#000000",
+        headSize: 15,
+        headAlign: "left",
+        colBg: "#e0e0e0",
+        colColor: "#000000",
+        colSize: 11,
+        colAlign: "left",
+        rowBg: "#ffffff",
+        rowColor: "#000000",
+        rowSize: 11,
+        rowAlign: "left",
+        numTodayColor: "#00cc00",
+        numTodaySize: 15,
+        numYdayColor: "#666666",
+        numYdaySize: 12,
+        numAlign: "right"
+    };
+
+    // ---------------------------------------------------------
+    // 3. FAHRZEUGLISTE (AAO)
+    // ---------------------------------------------------------
+    const AAO_TILES = [
+        // Fahrzeuge Rettungsdienst
+        { n: "KTW", c: "#FF9D0A" },
+        { n: "NEF", c: "#FF9D0A" },
+        { n: "NAW", c: "#FF9D0A" },
+        { n: "RTW", c: "#FF9D0A" },
+        { n: "IRTW", c: "#FF9D0A" },
+        { n: "RTH", c: "#FF9D0A" },
+        { n: "RTH mit Winde", c: "#FF9D0A" },
+        { n: "GRTW", c: "#FF9D0A" },
+        { n: "GRTW (3 Pat.mit NA)", c: "#FF9D0A" },
+        { n: "GRTW (7 Pat.ohne NA)", c: "#FF9D0A" },
+        { n: "KdoW LNA", c: "#FF9D0A" },
+        { n: "KdoW OrgL", c: "#FF9D0A" },
+        { n: "Manv 5", c: "#FF9D0A" },
+        { n: "Manv 10", c: "#FF9D0A" },
+        // Fahrzeuge Feuewehr
+        { n: "ELW 1", c: "#FF0000" },
+        { n: "ELW 2", c: "#FF0000" },
+        { n: "HLF20", c: "#FF0000" },
+        { n: "LF20", c: "#FF0000" },
+        { n: "DLK", c: "#FF0000" },
+        { n: "RW", c: "#FF0000" },
+        { n: "TLF", c: "#FF0000" },
+        { n: "Tankwagen", c: "#FF0000" },
+        { n: "GTLF", c: "#FF0000" },
+        { n: "FwK", c: "#FF0000" },
+        { n: "Dekon-P", c: "#FF0000" },
+        { n: "MTW", c: "#FF0000" },
+        { n: "Sonderlöschmittel", c: "#FF0000" },
+        { n: "NEA50", c: "#FF0000" },
+        { n: "NEA200", c: "#FF0000" },
+        { n: "WLF", c: "#FF0000" }, { n: "GW Atemschutz", c: "#FF0000" }, { n: "GW Gefahrgut", c: "#FF0000" },
+        { n: "GW Höhenrettung", c: "#FF0000" }, { n: "GW L-1", c: "#FF0000" }, { n: "GW L-2", c: "#FF0000" },
+        { n: "GW Messtechnik", c: "#FF0000" }, { n: "GW NEA50", c: "#FF0000" }, { n: "GW NEA200", c: "#FF0000" },
+        { n: "GW Oel/Umwelt", c: "#FF0000" }, { n: "GW Schlauch", c: "#FF0000" }, { n: "GW Tank", c: "#FF0000" },
+        { n: "AB Atemschutz", c: "#FF0000" }, { n: "AB Dekon-P", c: "#FF0000" }, { n: "AB Einsatzleitung", c: "#FF0000" },
+        { n: "AB Gefahrgut", c: "#FF0000" }, { n: "AB Küche", c: "#FF0000" }, { n: "AB Logistik", c: "#FF0000" },
+        { n: "AB Löschmittel", c: "#FF0000" }, { n: "AB Lüfter", c: "#FF0000" }, { n: "AB MZB", c: "#FF0000" },
+        { n: "AB Rüstmittel", c: "#FF0000" }, { n: "AB NEA200", c: "#FF0000" }, { n: "AB NEA50", c: "#FF0000" },
+        { n: "AB Oel/Umwelt", c: "#FF0000" }, { n: "AB Schiene", c: "#FF0000" }, { n: "AB Schlauch", c: "#FF0000" },
+        { n: "AB Sonderlöschmittel", c: "#FF0000" }, { n: "AB Tank", c: "#FF0000" }, { n: "AB Wasser/Schaum", c: "#FF0000" },
+        { n: "AB SLM", c: "#FF0000" },
+        { n: "GW Werkfeuerwehr", c: "#D44444" }, { n: "TM50", c: "#D44444" }, { n: "Turbolöscher", c: "#D44444" },
+        { n: "ULF mit Löscharm", c: "#D44444" }, { n: "FLF", c: "#D44444" }, { n: "Rettungstreppe", c: "#D44444" },
+        { n: "HLF Schiene", c: "#D44444" }, { n: "RW Schiene", c: "#D44444" },
+        // Fahrzeuge Polizei
+        { n: "LPol FuStW", c: "#54B509" },
+        { n: "LPol FuStW DGL", c: "#54B509" },
+        { n: "LPol FuStW Zivil", c: "#54B509" },
+        { n: "LPol Krad", c: "#54B509" },
+        { n: "LPol LauKw", c: "#54B509" },
+        { n: "PolHub", c: "#54B509" },
+        { n: "PolHub mit Winde", c: "#54B509" },
+        { n: "MEK MTF", c: "#54B509" },
+        { n: "MEK ZF", c: "#54B509" },
+        { n: "SEK MTF", c: "#54B509" },
+        { n: "SEK ZF", c: "#54B509" },
+        { n: "BP DHuFüKW", c: "#54B509" },
+        { n: "BP FüKW", c: "#54B509" },
+        { n: "BP GefKw", c: "#54B509" },
+        { n: "BP GruKw", c: "#54B509" },
+        { n: "BP LeBefKw", c: "#54B509" },
+        { n: "BP WaWe", c: "#54B509" },
+        { n: "Außenlastbehälter", c: "#54B509" },
+        // Fahrzeuge THW
+        { n: "THW Anh DLE", c: "#0571FF" }, { n: "THW BRmG R", c: "#0571FF" }, { n: "THW Feuerlöschpumpen", c: "#0571FF" },
+        { n: "THW GKW", c: "#0571FF" }, { n: "THW LKW 7 Lbw (FGr WP)", c: "#0571FF" }, { n: "THW MTW-TZ", c: "#0571FF" },
+        { n: "THW Schmutzwasserpumpen", c: "#0571FF" }, { n: "THW Tauchkraftwagen", c: "#0571FF" },
+        { n: "THW Anh SwPu", c: "#0571FF" }, { n: "THW LKW K 9", c: "#0571FF" }, { n: "THW MLW 4", c: "#0571FF" },
+        { n: "THW MLW 5", c: "#0571FF" }, { n: "THW MzGW (FGr N)", c: "#0571FF" }, { n: "THW NEA200", c: "#0571FF" },
+        { n: "THW NEA50", c: "#0571FF" }, { n: "THW Anh Hund", c: "#0571FF" }, { n: "THW Anh MzB", c: "#0571FF" },
+        { n: "THW Anh SchlB", c: "#0571FF" }, { n: "THW MLKW 7 Lkr 19 tm", c: "#0571FF" }, { n: "THW MTW-OV", c: "#0571FF" },
+        { n: "THW MTW-Tr UL", c: "#0571FF" }, { n: "THW NEA200 (Beliebige HiOrg)", c: "#0571FF" },
+        { n: "THW NEA50 (Beliebige HiOrg)", c: "#0571FF" }, { n: "THW Anh 12 Lbw (FGr Log-V)", c: "#0571FF" },
+        { n: "THW Anh FüLa", c: "#0571FF" }, { n: "THW FmKW", c: "#0571FF" }, { n: "THW FüKW", c: "#0571FF" },
+        { n: "THW LKW 7 Lbw (FGr Log-V)", c: "#0571FF" }, { n: "THW MTW-FGr K", c: "#0571FF" },
+        { n: "THW MTW-FGr Log-V", c: "#0571FF" }, { n: "THW Betreuung/Versorgung", c: "#0571FF" },
+        // Fahrzeuge SEG
+        { n: "SEG Rettungshundefahrzeug", c: "#FFD7A8" },
+        { n: "SEG KTW Typ-B", c: "#FFD7A8" },
+        { n: "SEG GW San", c: "#FFD7A8" },
+        { n: "SEG ELW", c: "#FFD7A8" },
+        { n: "SEG GW UAS", c: "#FFD7A8" },
+        { n: "SEG Bt Kombi", c: "#FFD7A8" },
+        { n: "SEG Bt LKW", c: "#FFD7A8" },
+        { n: "SEG FKH", c: "#FFD7A8" },
+        { n: "SEG GW Bt", c: "#FFD7A8" },
+        { n: "SEG Anh TeSi", c: "#FFD7A8" },
+        { n: "SEG GW TeSi", c: "#FFD7A8" },
+        { n: "SEG LKW Technik", c: "#FFD7A8" },
+        { n: "SEG MTW TeSi", c: "#FFD7A8" },
+        { n: "SEG NEA50", c: "#FFD7A8" },
+        { n: "SEG NEA50 (Beliebige HiOrg)", c: "#FFD7A8" },
+        { n: "SEG Betreuung/Versorgung", c: "#FFD7A8" },
+        // Fahrzeuge Drohne
+        { n: "DJI Mini 4k Drohne", c: "#CCCCCC" },
+        { n: "UAS ELW 2 Drohne", c: "#CCCCCC" },
+        { n: "UAS ELW Drohne", c: "#CCCCCC" },
+        { n: "UAS GW Drohne", c: "#CCCCCC" },
+        { n: "UAS MTF Drohne", c: "#CCCCCC" },
+        // Fahrzeuge Wasserrettung
+        { n: "GW Taucher", c: "#8CBAFF" },
+        { n: "GW Wasserrettung", c: "#8CBAFF" },
+        { n: "MZB", c: "#8CBAFF" },
+        // Fahrzeuge Seenotrettung
+        { n: "Seenotrettungsboot", c: "#8CBAFF" },
+        { n: "Seenotrettungskreuzer", c: "#8CBAFF" },
+        { n: "SAR", c: "#8CBAFF" },
+        { n: "SAR mit Winde", c: "#8CBAFF" },
+        // Fahrzeuge Bergrettung
+        { n: "GW Bergrettung", c: "#B0AC97" },
+        { n: "NEF Bergrettung", c: "#B0AC97" },
+        { n: "ATV Bergrettung", c: "#B0AC97" },
+        { n: "ELW Bergrettung", c: "#B0AC97" },
+        { n: "Schneefahrzeug", c: "#B0AC97" },
+        // Aktionen
+        { n: "Patienten", c: "#000000", i: ICONS.patient },
+        { n: "Gefangene", c: "#000000", i: ICONS.prisoner },
+        { n: "Katastrophenalarm Bielefeld", c: "#000000", i: ICONS.alarm }
+    ];
+
+    const normalize = (s) => (s || "").replace(/\u00A0/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+    const TILE_LIST = AAO_TILES.map(t => ({ ...t, norm: normalize(t.n) }));
+    const KEYS = AAO_TILES.map(t => t.n);
+
+    // ---------------------------------------------------------
+    // 4. DATEN-HANDLING
+    // ---------------------------------------------------------
+
+    const json = {
+        load(key, fallback) { try { return JSON.parse(GM_getValue(key, "")) || fallback; } catch { return fallback; } },
+        save(key, val) { GM_setValue(key, JSON.stringify(val)); }
+    };
+
+    const store = {
+        load: (key) => {
+            const o = json.load(key, {});
+            KEYS.forEach(k => { if (o[k] == null) o[k] = 0; });
+            return o;
+        },
+        save: (key, val) => json.save(key, val),
+        sendSignal: () => localStorage.setItem(STORAGE.SYNC_SIGNAL, Date.now().toString())
+    };
+
+    let uiSettings = { ...DEFAULTS, ...json.load(STORAGE.UISETTINGS, {}) };
+    for(const k in DEFAULTS) { if(uiSettings[k] === undefined) uiSettings[k] = DEFAULTS[k]; }
+
+    const saveUI = () => json.save(STORAGE.UISETTINGS, uiSettings);
+    const getTodayString = () => new Date().toLocaleDateString("de-DE");
+
+    function checkVehicleDayReset(state) {
+        const today = getTodayString();
+        if (GM_getValue(STORAGE.DAYSTAMP, "") !== today) {
+            const oldToday = store.load(STORAGE.COUNTS_TODAY);
+            store.save(STORAGE.YDAY_COUNTS, oldToday);
+            store.save(STORAGE.COUNTS_TODAY, {});
+            json.save(STORAGE.DETAILS_TODAY, {});
+            GM_setValue(STORAGE.DAYSTAMP, today);
+            if (state) {
+                state.today = {};
+                state.yday = store.load(STORAGE.YDAY_COUNTS);
+                state.det = {};
+            }
+            return true;
+        }
+        return false;
+    }
+
+    function incrementTileCount(vehicleKey, activeEl) {
+        if (!vehicleKey) return;
+        checkVehicleDayReset(state);
+        const inc = uiSettings.clickIncrement;
+        const k = vehicleKey;
+
+        state.today[k] = (state.today[k] || 0) + inc;
+        state.total[k] = (state.total[k] || 0) + inc;
+
+        state.det[k] = state.det[k] || {};
+        const detailName = normalize(activeEl ? activeEl.textContent : k) || k;
+        state.det[k][detailName] = (state.det[k][detailName] || 0) + inc;
+
+        store.save(STORAGE.COUNTS_TODAY, state.today);
+        store.save(STORAGE.COUNTS_TOTAL, state.total);
+        json.save(STORAGE.DETAILS_TODAY, state.det);
+        store.sendSignal();
+
+        // Nur UI updaten wenn auf Hauptseite
+        if (isMainPage) {
+            updateTile(k, state);
+            if (fzWrapper) fzWrapper.classList.remove("fzHidden");
+        }
+    }
+
+    function identifyClick(el) {
+        if (!el) return null;
+        const rawText = normalize((el.textContent || "") + " " + (el.title || "") + " " + (el.getAttribute("aria-label") || ""));
+        let best = null, bestLen = -1;
+        for (const t of TILE_LIST) {
+            if (rawText.includes(t.norm)) {
+                if (t.norm.length > bestLen) { best = t.n; bestLen = t.norm.length; }
+            }
+        }
+        return best;
+    }
+
+    // ---------------------------------------------------------
+    // 5. UI LOGIK (nur auf Hauptseite)
+    // ---------------------------------------------------------
+
+    let fzWrapper, uiRoot, hideTimer = null;
+
+    function injectCSS() {
+        GM_addStyle(`
+      :root {
+        --fz-mh: ${uiSettings.winMaxHeight}px;
+        --fz-t: ${uiSettings.winTop}px;
+        --fz-bg: ${uiSettings.winBg}; --fz-bc: ${uiSettings.winBorderC}; --fz-bw: ${uiSettings.winBorderW}px; --fz-br: ${uiSettings.winRadius}px;
+        --fz-h-bg: ${uiSettings.headBg}; --fz-h-c: ${uiSettings.headColor}; --fz-h-s: ${uiSettings.headSize}px; --fz-h-a: ${uiSettings.headAlign};
+        --fz-c-bg: ${uiSettings.colBg}; --fz-c-c: ${uiSettings.colColor}; --fz-c-s: ${uiSettings.colSize}px; --fz-c-a: ${uiSettings.colAlign};
+        --fz-r-bg: ${uiSettings.rowBg}; --fz-r-c: ${uiSettings.rowColor}; --fz-r-s: ${uiSettings.rowSize}px; --fz-r-a: ${uiSettings.rowAlign};
+        --fz-nt-c: ${uiSettings.numTodayColor}; --fz-nt-s: ${uiSettings.numTodaySize}px;
+        --fz-ny-c: ${uiSettings.numYdayColor}; --fz-ny-s: ${uiSettings.numYdaySize}px;
+        --fz-nb-j: ${uiSettings.numAlign === 'right' ? 'space-between' : 'flex-start'};
+      }
+      .fzWrapper { position:fixed; z-index:${CFG.zIndex}; top:var(--fz-t); left:5px; right:5px; width:auto; display:flex; flex-direction:column; background:var(--fz-bg); border:var(--fz-bw) solid var(--fz-bc); border-radius:0 0 var(--fz-br) var(--fz-br); box-shadow:0 10px 30px rgba(0,0,0,0.5); transition: opacity 0.4s, transform 0.4s ease-out; }
+      .fzWrapper.fzHidden { opacity:0; transform: translateY(-50px); pointer-events:none; }
+      .fzHeader { background:var(--fz-h-bg); color:var(--fz-h-c); padding:6px 10px; display:flex; align-items:center; user-select:none; }
+      .fzHeaderTitle { flex:1; text-align:var(--fz-h-a); font-size:var(--fz-h-s); font-weight:bold; }
+      .fzScrollArea { max-height:var(--fz-mh); overflow-y:auto; background:#fff; position:relative; }
+      .fzGrid { display:grid; grid-template-columns:repeat(${uiSettings.columns}, 1fr); gap:0; background:#ccc; border-top:1px solid #ccc; border-left:1px solid #ccc; }
+      .fzColHeader { background:var(--fz-c-bg); color:var(--fz-c-c); font-weight:bold; font-size:var(--fz-c-s); text-align:var(--fz-c-a); padding:4px 6px; border-bottom:1px solid #ccc; border-right:1px solid #ccc; }
+      .fzTile { display:flex; justify-content:var(--fz-nb-j); align-items:center; cursor:pointer; user-select:none; background:var(--fz-r-bg); padding:3px 6px; height:25px; border-left:5px solid transparent; border-right:1px solid #ccc; border-bottom:1px solid #ccc; gap:8px; }
+      .fzTile:hover { filter:brightness(0.95); }
+      .fzTileName { color:var(--fz-r-c); font-size:var(--fz-r-s); text-align:var(--fz-r-a); font-weight:bold; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; flex:1; }
+      .fzTileCount { background:rgba(0,0,0,0.05); padding:1px 5px; border-radius:3px; min-width:30px; text-align:right; white-space:nowrap; }
+      .fzTileIcon { font-size:18px; margin-right:10px; vertical-align:middle; line-height:1; }
+      .fzNumToday { font-weight:bold; color:var(--fz-nt-c); font-size:var(--fz-nt-s); }
+      .fzNumYday { font-weight:normal; color:var(--fz-ny-c); font-size:var(--fz-ny-s); margin-left:4px; }
+      .fzControls { display:flex; gap:6px; background:var(--fz-bg); padding:5px; border-top:1px solid #ccc; }
+      .fzBtn { background:#f5f5f5; border:1px solid #ccc; border-radius:4px; cursor:pointer; padding:4px; flex:1; font-weight:bold; color:#333; text-align:center; font-size:11px; }
+      .fzBtn:hover { background:#e0e0e0; }
+      .fzModalOverlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:100001; display:flex; justify-content:center; align-items:center; }
+      .fzModal { background:#fff; padding:20px; border-radius:8px; width:450px; max-height:90vh; overflow:auto; box-shadow:0 10px 30px rgba(0,0,0,0.5); font-family:sans-serif; font-size:13px; }
+      .fzSetGroup { margin-bottom:15px; border-bottom:2px solid #ccc; padding:10px 10px 20px 10px; }
+      .fzSetGroup h4 { margin:0 0 10px 0; background:#eee; padding:5px; font-size:14px; border-radius:4px; }
+      .fzRow { display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid #f9f9f9; }
+      .fzInput { width:80px; padding:2px; border:1px solid #ccc; border-radius:3px; text-align:right; }
+      .fzColor { width:40px; height:20px; border:none; padding:0; cursor:pointer; }
+      /* Trigger Zone: UNTEN LINKS */
+      .fzTriggerZone { position:fixed; bottom:0; left:0; width:80px; height:80px; z-index:100000; background:transparent; }
+    `);
+    }
+
+    function updateStyles() {
+        const r = document.documentElement.style;
+        const s = uiSettings;
+        const keys = {
+            '--fz-mh': s.winMaxHeight+'px', '--fz-t': s.winTop+'px',
+            '--fz-bg': s.winBg, '--fz-bc': s.winBorderC, '--fz-bw': s.winBorderW+'px', '--fz-br': s.winRadius+'px',
+            '--fz-h-bg': s.headBg, '--fz-h-c': s.headColor, '--fz-h-s': s.headSize+'px', '--fz-h-a': s.headAlign,
+            '--fz-c-bg': s.colBg, '--fz-c-c': s.colColor, '--fz-c-s': s.colSize+'px', '--fz-c-a': s.colAlign,
+            '--fz-r-bg': s.rowBg, '--fz-r-c': s.rowColor, '--fz-r-s': s.rowSize+'px', '--fz-r-a': s.rowAlign,
+            '--fz-nt-c': s.numTodayColor, '--fz-nt-s': s.numTodaySize+'px',
+            '--fz-ny-c': s.numYdayColor, '--fz-ny-s': s.numYdaySize+'px',
+            '--fz-nb-j': s.numAlign==='right'?'space-between':'flex-start'
+        };
+        for(let k in keys) r.setProperty(k, keys[k]);
+        if(uiRoot) uiRoot.style.gridTemplateColumns = `repeat(${s.columns}, 1fr)`;
+    }
+
+    function updateTile(key, state) {
+        if (!uiRoot) return;
+        const el = uiRoot.querySelector(`.fzTile[data-key="${CSS.escape(key)}"]`);
+        if (!el) return;
+        const v = (state.today[key] || 0);
+        const y = (state.yday[key] || 0);
+        el.querySelector(".fzTileCount").innerHTML = `<span class="fzNumToday">${v}</span><span class="fzNumYday">(${y})</span>`;
+    }
+
+    function showKataAlert() {
+        const ol = document.createElement("div");
+        ol.className = "fzModalOverlay";
+        ol.onclick = (e) => { if (e.target === ol) ol.remove(); };
+        ol.innerHTML = `
+        <div class="fzModal" style="text-align:center; border: 4px solid red;">
+            <h2 style="color:red; margin-top:0;">Katastrophenalarm Bielefeld</h2>
+            <div style="font-size:18px; line-height:1.5; font-weight:bold; margin:20px 0;">
+                Alle Rettungsmittel und Einsatzfahrzeuge sind alarmiert und befinden sich auf Anfahrt
+            </div>
+            <div style="color:#666; font-size:12px;">(Fenster schließt in 5 Sekunden)</div>
+        </div>
+    `;
+        document.body.appendChild(ol);
+        setTimeout(() => { if(ol) ol.remove(); }, 5000);
+    }
+
+    function createTile(key, state) {
+        const meta = AAO_TILES.find(t => t.n === key);
+        const color = meta?.c || "#888";
+        // Wir setzen das Emoji jetzt einfach als Text in ein SPAN-Element
+        const iconHtml = meta?.i ? `<span class="fzTileIcon">${meta.i}</span>` : "";
+
+        const div = document.createElement("div");
+        div.className = "fzTile";
+        div.dataset.key = key;
+        div.style.borderLeftColor = color;
+        div.innerHTML = `<div style="display:flex;align-items:center;flex:1;overflow:hidden;">${iconHtml}<span class="fzTileName">${key}</span></div><span class="fzTileCount"><span class="fzNumToday">0</span><span class="fzNumYday">(0)</span></span>`;
+        div.onclick = () => showDetails(key, state);
+        return div;
+    }
+
+    function showDetails(key, state) {
+        const data = state.det[key] || {};
+        const list = Object.entries(data).sort((a, b) => b[1] - a[1])
+        .map(([n, c]) => `<div class="fzRow"><span>${n}</span><b>${c}</b></div>`).join("") || "<div style='padding:10px;text-align:center;color:#999'>Keine Daten</div>";
+        const ol = document.createElement("div");
+        ol.className = "fzModalOverlay";
+        ol.onclick = (e) => { if (e.target === ol) ol.remove(); };
+        ol.innerHTML = `<div class="fzModal"><h3>${key} (Heute)</h3>${list}<button class="fzBtn" style="margin-top:15px;width:100%" onclick="this.closest('.fzModalOverlay').remove()">Schließen</button></div>`;
+        document.body.appendChild(ol);
+    }
+
+    function openSettings() {
+        const ol = document.createElement("div");
+        ol.className = "fzModalOverlay";
+        const modal = document.createElement("div");
+        modal.className = "fzModal";
+        modal.innerHTML = `<h3>Einstellungen</h3>`;
+
+        const createInput = (label, key, type = "text", opts = []) => {
+            const row = document.createElement("div");
+            row.className = "fzRow";
+            row.innerHTML = `<span>${label}</span>`;
+            let inp;
+            if (type === "select") {
+                inp = document.createElement("select");
+                opts.forEach(o => {
+                    const opt = document.createElement("option");
+                    opt.value = o; opt.textContent = o;
+                    if(uiSettings[key] === o) opt.selected = true;
+                    inp.appendChild(opt);
+                });
+            } else {
+                inp = document.createElement("input");
+                inp.type = type;
+                inp.value = uiSettings[key];
+                inp.className = type === "color" ? "fzColor" : "fzInput";
+            }
+            inp.onchange = (e) => {
+                let val = e.target.value;
+                if(type === "number") val = parseInt(val, 10);
+                uiSettings[key] = val;
+                updateStyles();
+                saveUI();
+            };
+            row.appendChild(inp);
+            return row;
+        };
+
+        const group = (title) => {
+            const d = document.createElement("div");
+            d.className = "fzSetGroup";
+            d.innerHTML = `<h4>${title}</h4>`;
+            return d;
+        };
+
+        const groups = [
+            { t: "Fenster Layout", i: [["Max Höhe", "winMaxHeight", "number"], ["Oben", "winTop", "number"], ["BG", "winBg", "color"], ["Rahmen", "winBorderC", "color"], ["Dicke", "winBorderW", "number"], ["Radius", "winRadius", "number"]] },
+            { t: "Fenstername (Header)", i: [["BG", "headBg", "color"], ["Farbe", "headColor", "color"], ["Größe", "headSize", "number"], ["Align", "headAlign", "select", ["left", "center", "right"]]] },
+            { t: "Spalten Titel", i: [["BG", "colBg", "color"], ["Farbe", "colColor", "color"], ["Größe", "colSize", "number"], ["Align", "colAlign", "select", ["left", "center", "right"]]] },
+            { t: "Fahrzeuge", i: [["BG", "rowBg", "color"], ["Farbe", "rowColor", "color"], ["Größe", "rowSize", "number"], ["Align", "rowAlign", "select", ["left", "center", "right"]]] },
+            { t: "Zahlen", i: [["Heute Farbe", "numTodayColor", "color"], ["Heute Größe", "numTodaySize", "number"], ["Gestern Farbe", "numYdayColor", "color"], ["Gestern Größe", "numYdaySize", "number"], ["Align", "numAlign", "select", ["left", "right"]]] },
+            { t: "Verhalten", i: [["Einblendzeit", "autoHideSeconds", "number"], ["Klicks", "clickIncrement", "number"], ["Spalten", "columns", "number"]] }
+        ];
+
+        groups.forEach(g => {
+            const d = group(g.t);
+            g.i.forEach(item => d.appendChild(createInput(item[0], item[1], item[2], item[3])));
+            modal.appendChild(d);
+        });
+
+        const btn = document.createElement("button");
+        btn.className = "fzBtn";
+        btn.style.marginTop = "15px"; btn.style.width = "100%"; btn.textContent = "Schließen";
+        btn.onclick = () => ol.remove();
+        modal.appendChild(btn);
+        ol.appendChild(modal);
+        document.body.appendChild(ol);
+    }
+
+    function initUI(state) {
+        if (fzWrapper || !isMainPage) return; // Nur auf Hauptseite initialisieren
+        injectCSS(); updateStyles();
+
+        // Trigger Zone (Unsichtbar, links am Rand)
+        const trigger = document.createElement("div");
+        trigger.className = "fzTriggerZone";
+        trigger.onmouseenter = () => {
+             clearTimeout(hideTimer);
+             if(fzWrapper) fzWrapper.classList.remove("fzHidden");
+        };
+        document.body.appendChild(trigger);
+
+        fzWrapper = document.createElement("div");
+        fzWrapper.className = "fzWrapper";
+
+        fzWrapper.onmouseleave = () => { clearTimeout(hideTimer); hideTimer = setTimeout(() => fzWrapper.classList.add("fzHidden"), uiSettings.autoHideSeconds * 1000); };
+        fzWrapper.onmouseenter = () => { clearTimeout(hideTimer); fzWrapper.classList.remove("fzHidden"); };
+
+        const fzHeader = document.createElement("div");
+        fzHeader.className = "fzHeader";
+        fzHeader.innerHTML = `
+        <div style="display:flex;align-items:center;flex:1">
+           <div class="fzHeaderTitle">Fahrzeugzähler</div>
+        </div>`;
+        fzWrapper.appendChild(fzHeader);
+
+        const scrollArea = document.createElement("div");
+        scrollArea.className = "fzScrollArea";
+
+        uiRoot = document.createElement("div");
+        uiRoot.className = "fzGrid";
+
+        const redrawGrid = () => {
+            uiRoot.innerHTML = "";
+            for(let i=0; i<uiSettings.columns; i++) {
+                const h = document.createElement("div");
+                h.className = "fzColHeader";
+                h.textContent = "Fahrzeuge Heute/Gestern";
+                uiRoot.appendChild(h);
+            }
+            KEYS.forEach(k => uiRoot.appendChild(createTile(k, state)));
+            KEYS.forEach(k => updateTile(k, state));
+        };
+        redrawGrid();
+
+        scrollArea.appendChild(uiRoot);
+        fzWrapper.appendChild(scrollArea);
+
+        const ctl = document.createElement("div");
+        ctl.className = "fzControls";
+        const mkBtn = (txt, fn) => {
+            const b = document.createElement("button");
+            b.className = "fzBtn";
+            b.textContent = txt; b.onclick = fn; ctl.appendChild(b);
+        };
+        mkBtn("_", (e) => { e.stopPropagation(); fzWrapper.classList.add("fzHidden"); });
+        mkBtn("⚙", () => openSettings());
+        mkBtn("🏠", () => window.open("/buildings/26017007"));
+        mkBtn("🗺️", () => window.open("/leitstellenansicht"));
+        mkBtn("🎓", () => window.open("/buildings/26017007#tab_schooling"));
+        fzWrapper.appendChild(ctl);
+
+        document.body.appendChild(fzWrapper);
+
+        hideTimer = setTimeout(() => fzWrapper.classList.add("fzHidden"), uiSettings.autoHideSeconds * 1000);
+    }
+
+    // ---------------------------------------------------------
+    // 5. EVENTS (läuft überall)
+    // ---------------------------------------------------------
+
+    const state = {
+        today: store.load(STORAGE.COUNTS_TODAY),
+        total: store.load(STORAGE.COUNTS_TOTAL),
+        yday: store.load(STORAGE.YDAY_COUNTS),
+        det: json.load(STORAGE.DETAILS_TODAY, {})
+    };
+
+    // Click-Events laufen auf allen Seiten
+    document.addEventListener("click", (e) => {
+        const activeEl = e.target.closest("a, button, input[type='submit'], div.btn, span.btn");
+        if (!activeEl) return;
+        const text = (activeEl.textContent || activeEl.value || "").trim().toLowerCase();
+
+        // 1. ZUERST GEFANGENE PRÜFEN
+        if (text.includes("zelle") || text.includes("gewahrsam") || text.includes("gefangene") || text.includes("justiz") || text.includes("sheriff")) {
+            incrementTileCount("Gefangene", activeEl);
+            return;
+        }
+
+        // 2. DANN PATIENTEN PRÜFEN
+        if (text.includes("anfahren") || text.includes("transportieren") || text.includes("notaufnahme")) {
+            incrementTileCount("Patienten", activeEl);
+            return;
+        }
+
+        // 3. FAHRZEUGE & ALARM
+        const isValidArea = activeEl.closest("#mission_aao, .vehicle_select_table, .aao, #mission-window, .aao-grid, .mission_panel_content, .missionMap, #vehicle_table, .vehicle-table, .mission-vehicles");
+
+        if (!isValidArea) return;
+
+        const key = identifyClick(activeEl);
+        if (key) {
+            incrementTileCount(key, activeEl);
+
+            if (key === "KTW" || key === "IRTW") {
+                incrementTileCount("Patienten", activeEl);
+            }
+
+            // Katastrophenalarm
+            if (key === "Katastrophenalarm Bielefeld") {
+                if (isMainPage) showKataAlert();
+                incrementTileCount("Patienten", activeEl);
+                KEYS.forEach(vehicleKey => {
+                    if(vehicleKey !== "Katastrophenalarm Bielefeld" && vehicleKey !== "Patienten" && vehicleKey !== "Gefangene") {
+                        incrementTileCount(vehicleKey, activeEl);
+                    }
+                });
+            }
+        }
+    }, true);
+
+    // Sync zwischen Tabs
+    window.addEventListener("storage", (e) => {
+        if (e.key === STORAGE.SYNC_SIGNAL) {
+            state.today = store.load(STORAGE.COUNTS_TODAY);
+            state.total = store.load(STORAGE.COUNTS_TOTAL);
+            state.yday = store.load(STORAGE.YDAY_COUNTS);
+            state.det = json.load(STORAGE.DETAILS_TODAY, {});
+            if (isMainPage) {
+                KEYS.forEach(k => updateTile(k, state));
+            }
+        }
+    });
+
+    // Tageswechsel Check
+    setInterval(() => {
+        if (document.hidden) return;
+        if (checkVehicleDayReset(state)) {
+            if (isMainPage) {
+                KEYS.forEach(k => updateTile(k, state));
+            }
+        }
+    }, 1000);
+
+    // UI nur auf Hauptseite starten
+    if (isMainPage) {
+        setTimeout(() => initUI(state), 500);
+    }
+
+})();

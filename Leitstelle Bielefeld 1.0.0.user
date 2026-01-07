@@ -1,0 +1,231 @@
+// ==UserScript==
+// @name         Leitstelle Bielefeld
+// @namespace    http://tampermonkey.net/
+// @version      1.0.Final
+// @license      Design by Bobelle
+// @author       Design by Bobelle
+// @icon         https://www.leitstellenspiel.de/favicon.ico
+// @description  Zeigt die Leitstelle
+// @match        https://leitstellenspiel.de/*
+// @match        https://www.leitstellenspiel.de/*
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_deleteValue
+// @grant        GM_addValueChangeListener
+// @grant        GM_addStyle
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    // ---------- Konfiguration ----------
+    const CONFIG = {
+        storageKeyCount: 'ktw_counter_count',
+        storageKeyDate: 'ktw_counter_date',
+        buttonBaseY: 220,
+        buttonPosX: 11,
+        debounceTime: 500 // Millisekunden Sperre nach Klick (verhindert Doppelzählung)
+    };
+
+    // Buttons wirklich NUR auf der Startseite (Übersichtsseite "/")
+    const isStartseite = window.location.pathname === "/";
+    let isCountingLocked = false; // Flag für Debouncing
+
+    // ---------- CSS Styles (Sauberer als Inline-Styles) ----------
+    if (isStartseite) {
+        GM_addStyle(`
+            .lss-custom-btn {
+                position: fixed;
+                left: ${CONFIG.buttonPosX}px;
+                width: 33px;
+                height: 33px;
+                background-color: white;
+                border: 2px solid black;
+                border-radius: 4px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                cursor: pointer;
+                user-select: none;
+                z-index: 9999;
+                transition: all 0.2s ease;
+            }
+            .lss-custom-btn:hover {
+                transform: scale(1.1);
+                border-color: #444;
+            }
+            .lss-custom-btn svg {
+                stroke: black;
+                transition: stroke 0.2s ease;
+            }
+            .lss-custom-btn:hover svg {
+                stroke: #444;
+            }
+            .ktw-anim {
+                color: #00FF00 !important;
+                transform: scale(1.2);
+            }
+        `);
+    }
+
+    // ---------- 1. Initialisierung & Reset-Logik ----------
+    const today = new Date().toISOString().split('T')[0];
+    let currentCount = parseInt(GM_getValue(CONFIG.storageKeyCount, '0'), 10);
+    const lastResetDate = GM_getValue(CONFIG.storageKeyDate, '');
+
+    // Reset um Mitternacht
+    if (lastResetDate !== today) {
+        currentCount = 0;
+        GM_setValue(CONFIG.storageKeyDate, today);
+        GM_setValue(CONFIG.storageKeyCount, '0');
+    }
+
+    // Elemente cachen
+    let ktwDisplayElement = null;
+    let ktwButtonDiv = null;
+
+    // ---------- 2. Zähl-Logik ----------
+    function incrementCounter() {
+        if (isCountingLocked) return; // Abbruch wenn gesperrt
+
+        // Sperre setzen
+        isCountingLocked = true;
+        setTimeout(() => { isCountingLocked = false; }, CONFIG.debounceTime);
+
+        currentCount++;
+        GM_setValue(CONFIG.storageKeyCount, currentCount.toString());
+        console.log('[LSS-KTW] +1 -> Neuer Stand:', currentCount);
+    }
+
+    function checkAndCount() {
+        // Wir suchen im DOM nach der Überschrift.
+        // Funktioniert sowohl im eigenen Tab als auch in der Lightbox
+        const missionHeader = document.getElementById('missionH1');
+        if (!missionHeader) return;
+
+        const title = missionHeader.textContent.trim();
+        // Check: KTW muss im Namen vorkommen
+        if (title.includes("Krankentransport")) {
+            incrementCounter();
+        }
+    }
+
+    // ---------- 3. UI Update (Visuell) ----------
+    function updateVisual() {
+        if (!ktwDisplayElement || !ktwButtonDiv) return;
+
+        ktwDisplayElement.textContent = currentCount;
+        ktwButtonDiv.title = `Heutige KTW-Alarmierungen: ${currentCount}`;
+
+        // Animation
+        ktwDisplayElement.classList.add('ktw-anim');
+        setTimeout(() => {
+            if (ktwDisplayElement) ktwDisplayElement.classList.remove('ktw-anim');
+        }, 300);
+    }
+
+    // ---------- 4. Sync-Listener (Das Herzstück) ----------
+    GM_addValueChangeListener(CONFIG.storageKeyCount, function(name, old_value, new_value, remote) {
+        const newVal = parseInt(new_value, 10);
+        if (!isNaN(newVal)) {
+            currentCount = newVal;
+            updateVisual();
+        }
+    });
+
+    // ---------- 5. GUI erstellen ----------
+    if (isStartseite) {
+        const buttons = [
+            {
+                id: "lss-leitstellen-button",
+                title: "Leitstellenansicht öffnen",
+                link: "/leitstellenansicht",
+                icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 11L12 3L21 11"/><path d="M5 11V21H19V11"/></svg>`
+            },
+            {
+                id: "lss-gebaeude-button",
+                title: "Gebäude öffnen",
+                link: "/buildings/26017007", // ID ggf. anpassen oder dynamisch machen
+                icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="6" y="9" width="12" height="12"/><path d="M6 9L12 3L18 9"/></svg>`
+            },
+            {
+                id: "lss-einsaetze-button",
+                title: "Einsätze öffnen",
+                link: "/einsaetze",
+                icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12 2L15 9H22L17 14L19 21L12 17L5 21L7 14L2 9H9L12 2Z"/></svg>`
+            },
+            {
+                id: "lss-schulen-button",
+                title: "Schulen",
+                link: "/buildings/26017007#tab_schooling",
+                icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M2 10H22"/><path d="M6 10V20"/><path d="M10 10V20"/><path d="M14 10V20"/><path d="M18 10V20"/><path d="M4 20H20"/><path d="M12 4L3 10H21L12 4Z"/></svg>`
+            },
+
+        ];
+
+        buttons.forEach((btn, index) => {
+            if (document.getElementById(btn.id)) return;
+
+            const div = document.createElement("div");
+            div.id = btn.id;
+            div.className = "lss-custom-btn";
+            div.style.top = `${CONFIG.buttonBaseY + index * 35}px`; // 33 height + 2 gap
+            div.title = btn.title;
+            div.innerHTML = btn.isCounter ? btn.content : btn.icon;
+
+            document.body.appendChild(div);
+
+            if (btn.isCounter) {
+                ktwDisplayElement = div.querySelector('#ktw-counter-display');
+                ktwButtonDiv = div;
+                updateVisual();
+
+                // Doppelklick Reset
+                div.addEventListener('dblclick', (e) => {
+                    e.stopPropagation();
+                    if (confirm(`KTW-Zähler auf 0 zurücksetzen?`)) {
+                        GM_setValue(CONFIG.storageKeyCount, '0');
+                    }
+                });
+            }
+
+            // Klick-Event (außer bei Doppelklick Logik)
+            div.addEventListener('click', (e) => {
+                if (btn.isCounter && e.detail > 1) return; // Verhindert Klick bei Doppelklick
+                window.open(btn.link, "_blank");
+            });
+        });
+    }
+
+    // ---------- 6. Event Listener (Optimiert) ----------
+
+    // Wir nutzen Event Delegation am Document, prüfen aber präziser
+    document.addEventListener('click', function(e) {
+        const target = e.target;
+
+        // Prüfen auf spezifische IDs und Klassen von LSS Alarm-Buttons
+        // #mission_alarm_btn = Hauptalarmknopf
+        // .alert_notify_submit = "Alarmieren & Weiter" etc.
+        if (target.matches('#mission_alarm_btn') ||
+            target.closest('#mission_alarm_btn') ||
+            target.closest('.alert_notify_submit') ||
+            target.closest('.alert_next')) {
+
+            checkAndCount();
+        }
+    }, true); // Capture Phase nutzen, um frühzeitig abzufangen
+
+    // Enter-Taste
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            const activeTag = document.activeElement.tagName.toLowerCase();
+            if (activeTag === 'input' || activeTag === 'textarea') return;
+
+            // Prüfen, ob wir überhaupt in einer Mission sind
+            if (document.getElementById('mission_alarm_btn')) {
+                checkAndCount();
+            }
+        }
+    });
+
+})();
