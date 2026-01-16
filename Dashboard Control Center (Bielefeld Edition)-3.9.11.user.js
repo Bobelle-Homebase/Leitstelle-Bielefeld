@@ -10,6 +10,8 @@
 // @match              https://www.missionchief.com/*
 // @match              https://missionchief.com/*
 // @match              https://www.meldkamerspel.com/*
+// @updateURL          https://github.com/Bobelle-Homebase/Leitstelle-Bielefeld/raw/refs/heads/main/Dashboard%20Control%20Center%20(Bielefeld%20Edition)-3.9.11.user.js
+// @downloadURL        https://github.com/Bobelle-Homebase/Leitstelle-Bielefeld/raw/refs/heads/main/Dashboard%20Control%20Center%20(Bielefeld%20Edition)-3.9.11.user.js
 // @grant              GM_setValue
 // @grant              GM_getValue
 // @grant              GM_addStyle
