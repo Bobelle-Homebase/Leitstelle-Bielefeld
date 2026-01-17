@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dashboard Mission Counter (Bielefeld Edition)
 // @namespace    https://leitstellenspiel.de/
-// @version      2.20.0
+// @version      3.9.11
 // @description  5 Fenster. Zählt Patienten/Gefangene via Funk (Status 7). Erkennt GefKw, LPol, Zivilstreife etc.
 // @match        https://www.leitstellenspiel.de/*
 // @updateURL    https://github.com/Bobelle-Homebase/Leitstelle-Bielefeld/blob/main/Dashboard%20Mission%20Counter%20(Bielefeld%20Edition)-2.20.0.user.js
