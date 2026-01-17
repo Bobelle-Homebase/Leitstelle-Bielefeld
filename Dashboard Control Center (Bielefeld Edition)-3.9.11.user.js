@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name               Dashboard Control Center (Bielefeld Edition)
 // @namespace          https://leitstellenspiel.de/bielefeld
-// @version            3.9.11
+// @version            3.9.15
 // @license            Design by Bobelle
-// @author             Design by Bobelle
-// @description        V3.9.11: Patienten, Gefangene & Betreuung haben keinen Status-Punkt mehr.
+// @author             Design by Bobelle (Mod by User)
+// @description        V3.9.15-Mod-V4: Pat/Gef/Betreuung (Blau blinkend), Alarme (Rot blinkend), Fzg (Status-Farben).
 // @match              https://www.leitstellenspiel.de/*
 // @match              https://leitstellenspiel.de/*
 // @match              https://www.missionchief.com/*
@@ -20,6 +20,27 @@
 
 (() => {
     "use strict";
+
+    // =========================================================================
+    // TEIL 0: SPEZIAL-GRUPPEN DEFINITION
+    // =========================================================================
+    const GROUP_LOGISTICS = [
+        "Betreuung/Versorgung",
+        "Patienten",
+        "Gefangene"
+    ];
+
+    const GROUP_ALARMS = [
+        "FFW Vollalarm",
+        "SEG Vollalarm",
+        "THW Vollalarm",
+        "AB Vollalarm",
+        "Katastrophenalarm Bielefeld",
+        "BergRett Vollalarm",
+        "SeeRett Vollalarm",
+        "WasserRett Vollalarm",
+        "ABC Vollalarm"
+    ];
 
     // =========================================================================
     // TEIL 1: ID MAPPING & KONSTANTEN
@@ -163,7 +184,7 @@
         winBg: "#f8f9fa", winBorderC: "#e9ecef", winBorderW: 1, winRadius: 0,
 
         // HIER FARBE TITELLEISTE ÄNDERN:
-        headBg: "#e9ecef", // <--- HIER FARBE ÄNDERN (z.B. "#ff0000" für Rot)
+        headBg: "#e9ecef",
 
         headColor: "#343a40", headSize: 15, headAlign: "left",
         colBg: "#e9ecef", colColor: "#495057", colSize: 11, colAlign: "left",
@@ -201,7 +222,7 @@
         { n: "Dekon-P", c: "#FF0000", s: ["dekon", "dekonp"], cat: "FW" },
         { n: "MTW Mannschaft", c: "#FF0000", s: ["mtw", "mannschaft"], cat: "FW" },
         { n: "MTW Verpflegung", c: "#FF0000", s: ["mtw","verpflegung","verpflegung"], cat: "FW" },
-        { n: "SLF", c: "#FF0000", s: ["slf", "sonderlösch"], cat: "FW" },
+        { n: "SLF", c: "#FF0000", s: ["slf", "sonderlöschfahrzeug"], cat: "FW" },
         { n: "WLF", c: "#FF0000", s: ["wlf", "wechsellader"], cat: "FW" },
         { n: "GW Atemschutz", c: "#FF0000", s: ["atemschutz", "gwa"], cat: "FW" },
         { n: "GW Gefahrgut", c: "#FF0000", s: ["gefahrgut", "gwg"], cat: "FW" },
@@ -239,7 +260,7 @@
         { n: "Turbolöscher", c: "#D44444", s: ["turbo"], cat: "WerkFW" },
         { n: "ULF mit Löscharm", c: "#D44444", s: ["ulf", "löscharm"], cat: "WerkFW" },
         // Flughafenfeuerwehr
-        { n: "FLF", c: "#D44444", s: ["flf", "flugfeld"], cat: "FlugFW" },
+        { n: "FLF", c: "#D44444", s: ["flf", "flugfeldlöschfahrzeug"], cat: "FlugFW" },
         { n: "Rettungtreppe", c: "#D44444", s: ["rettungtreppe"], cat: "FlugFW" },
         // FW allgemein
         { n: "HLF Schiene", c: "#D44444", s: ["hlfschiene"], cat: "FW" },
@@ -347,7 +368,6 @@
         { n: "Anh NEA200", c: "#0571FF", s: ["anhnea200", "netz"], cat: "Netz" },
 
         // Bielefeld Specifics & Vollalarme - noStatus: true
-        //Orginal mit Icon { n: "Katastrophenalarm Bielefeld", c: "#FFFF45", i: ICONS.alarm, s: ["katastrophenalarm","Vollalarm", "bielefeld", "kat-alarm", "großalarm"], cat: "Kat" },
         { n: "Katastrophenalarm Bielefeld", c: "#000000", s: ["katastrophenalarm", "bielefeld", "kat-alarm", "großalarm"], cat: "Kat", noStatus: true },
         { n: "FFW Vollalarm", c: "#000000", s: ["FFW Vollalarm", "Feuerwehr Vollalarm"], cat: "Kat", noStatus: true },
         { n: "SEG Vollalarm", c: "#000000", s: ["SEG Vollalarm", "Schnelleinsatzgruppe Vollalarm"], cat: "Kat", noStatus: true },
@@ -475,23 +495,19 @@
 
     // New helper to trigger the blinking animation
     function triggerAlarmBlink(key) {
-        const alarmKeys = [
-            "Katastrophenalarm Bielefeld", "FFW Vollalarm", "SEG Vollalarm",
-            "THW Vollalarm", "BergRett Vollalarm", "WasserRett Vollalarm",
-            "SeeRett Vollalarm", "AB Vollalarm", "ABC Vollalarm"
-        ];
+        const el = tileEls[key];
+        if (!el) return;
 
-        if (alarmKeys.includes(key) && tileEls[key]) {
-            const el = tileEls[key];
-            // Reset animation
-            el.classList.remove("fzBlink");
-            void el.offsetWidth; // Force reflow
-            el.classList.add("fzBlink");
+        // Reset previous animations
+        el.classList.remove("fzBlinkRed", "fzBlinkBlue");
+        void el.offsetWidth; // Force reflow
 
-            // Clean up class after animation ends (optional, keeps DOM clean)
-            el.addEventListener('animationend', () => {
-                el.classList.remove("fzBlink");
-            }, { once: true });
+        if (GROUP_ALARMS.includes(key)) {
+            el.classList.add("fzBlinkRed");
+            el.addEventListener('animationend', () => el.classList.remove("fzBlinkRed"), { once: true });
+        } else if (GROUP_LOGISTICS.includes(key)) {
+            el.classList.add("fzBlinkBlue");
+            el.addEventListener('animationend', () => el.classList.remove("fzBlinkBlue"), { once: true });
         }
     }
 
@@ -1015,17 +1031,26 @@
             }
             .fzStatusItem:hover { filter: brightness(1.2); }
 
-            /* AGGRESSIVE Blink Animation für Vollalarm */
-            @keyframes fzFlashRed {
-                0% { background-color: #ff3333 !important; color: #fff !important; transform: scale(1.05); border-color: red !important; }
-                50% { background-color: #fff !important; color: #000 !important; transform: scale(1); }
-                100% { background-color: #ff3333 !important; color: #fff !important; transform: scale(1.05); border-color: red !important; }
+            /* Animation Definitions */
+            @keyframes fzFlashRedSlow {
+                0%, 100% { background-color: #ffcccc; transform: scale(1); }
+                50% { background-color: #ff3333; color: white; transform: scale(1.05); }
             }
-            .fzBlink {
-                animation: fzFlashRed 0.8s ease-in-out 10; /* Schneller, auffälliger */
+            @keyframes fzFlashBlueSlow {
+                0%, 100% { background-color: #cce5ff; transform: scale(1); }
+                50% { background-color: #007bff; color: white; transform: scale(1.05); }
+            }
+            .fzBlinkRed {
+                animation: fzFlashRedSlow 1s ease-in-out 20; /* 20 times, slow */
                 z-index: 9999;
-                position: relative; /* Needed for z-index and transform */
+                position: relative;
                 box-shadow: 0 0 5px red;
+            }
+            .fzBlinkBlue {
+                animation: fzFlashBlueSlow 1s ease-in-out 20; /* 20 times, slow */
+                z-index: 9999;
+                position: relative;
+                box-shadow: 0 0 5px blue;
             }
         `);
     }
@@ -1067,11 +1092,39 @@
         }
 
         const dot = el.querySelector(".fzStatusDot");
-        if (!dot) return;
+
+        // --- SPECIAL GROUPS CHECK ---
+        // Group Logistics: Betreuung, Patienten, Gefangene (BLUE)
+        if (GROUP_LOGISTICS.includes(key)) {
+            if (v > 0) {
+                el.style.backgroundColor = "#cce5ff"; // Hellblau
+                el.style.color = "#000";
+            } else {
+                el.style.backgroundColor = "#e6e6e6"; // Hellgrau
+                el.style.color = "#888";
+            }
+            if (dot) dot.style.display = 'none';
+            return; // Exit here, ignore rest
+        }
+
+        // Group Alarms (RED)
+        if (GROUP_ALARMS.includes(key)) {
+            if (v > 0) {
+                el.style.backgroundColor = "#ffcccc"; // Hellrot
+                el.style.color = "#000";
+            } else {
+                el.style.backgroundColor = "#e6e6e6"; // Hellgrau
+                el.style.color = "#888";
+            }
+            if (dot) dot.style.display = 'none';
+            return; // Exit here
+        }
+
+        // --- STANDARD LOGIC ---
+        if (dot) dot.style.display = 'none'; // PUNKT IMMER AUSBLENDEN
 
         // SPECIAL HANDLING FOR TILES WITH NO STATUS
         if (tileMeta && tileMeta.noStatus) {
-            dot.style.display = 'none'; // Hide the dot
             el.style.backgroundColor = uiSettings.rowBg; // Always default background
             el.style.color = uiSettings.rowColor;
             return; // Skip the rest of the status logic
@@ -1080,15 +1133,18 @@
         const exists = vehicleExists[key] === true;
         const isAvail = vehicleAvailability[key] === true;
 
-        dot.style.display = 'block'; // Ensure dot is visible for normal tiles
-        dot.style.backgroundColor = isAvail ? "#5cb85c" : (exists ? "#f0ad4e" : "#ff0000");
-
         if (isAvail) {
-            el.style.backgroundColor = uiSettings.rowBg;
-            el.style.color = uiSettings.rowColor;
+            // GRÜN: Verfügbar (Status 1 oder 2)
+            el.style.backgroundColor = "#cfefd4";
+            el.style.color = "#000000";
+        } else if (exists) {
+            // ORANGE: Existiert, aber unterwegs (Status 3, 4, etc.)
+            el.style.backgroundColor = "#ffeeba";
+            el.style.color = "#000000";
         } else {
-            el.style.backgroundColor = exists ? "#fff3cd" : uiSettings.rowBg;
-            el.style.color = uiSettings.rowColor;
+            // GRAU/STANDARD: Existiert nicht
+            el.style.backgroundColor = "#e6e6e6"; // <--- Geändert von uiSettings.rowBg
+            el.style.color = "#888888"; // Text etwas ausgrauen
         }
     }
 
@@ -1114,6 +1170,7 @@
         const dot = document.createElement("div");
         dot.className = "fzStatusDot";
         dot.style.backgroundColor = "#ff0000";
+        // dot wird hier zwar erstellt, aber in updateTile sofort ausgeblendet
         div.appendChild(dot);
 
         div.insertAdjacentHTML("beforeend",
