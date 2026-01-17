@@ -10,8 +10,8 @@
 // @version      2.20.0
 // @description  5 Fenster. Zählt Patienten/Gefangene via Funk (Status 7). Erkennt GefKw, LPol, Zivilstreife etc.
 // @match        https://www.leitstellenspiel.de/*
-// @updateURL    https://github.com/Bobelle-Homebase/Leitstelle-Bielefeld/raw/refs/heads/main/Dashboard%20Control%20Center%20(Bielefeld%20Edition)-3.9.11.user.js
-// @downloadURL  https://github.com/Bobelle-Homebase/Leitstelle-Bielefeld/raw/refs/heads/main/Dashboard%20Control%20Center%20(Bielefeld%20Edition)-3.9.11.user.js
+// @updateURL    https://raw.githubusercontent.com/Bobelle-Homebase/Leitstelle-Bielefeld/refs/heads/main/Dashboard%20Mission%20Counter%20(Bielefeld%20Edition)
+// @downloadURL  https://raw.githubusercontent.com/Bobelle-Homebase/Leitstelle-Bielefeld/refs/heads/main/Dashboard%20Mission%20Counter%20(Bielefeld%20Edition)
 // @grant        GM_addStyle
 // @grant        GM_getValue
 // @grant        GM_setValue
