@@ -254,6 +254,7 @@
         { n: "AB Tank", c: "#FF0000", s: ["abtank"], cat: "FW" },
         { n: "AB Wasser/Schaum", c: "#FF0000", s: ["abwasser"], cat: "FW" },
         { n: "Anh Lüfter", c: "#FF0000", s: ["anhlüfter"], cat: "FW" },
+        { n: "Anh Anh FKH", c: "#FF0000", s: ["anhfkh"], cat: "FW" },
         // Werkfeuerwehr
         { n: "GW Werkfeuerwehr", c: "#D44444", s: ["werkfeuerwehr"], cat: "WerkFW" },
         { n: "TM50", c: "#D44444", s: ["tm50", "teleskop"], cat: "WerkFW" },
