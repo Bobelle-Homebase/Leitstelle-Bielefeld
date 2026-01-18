@@ -7,9 +7,8 @@
 // @description  Zeigt Tageszähler, Credits-Bilanz und Dienstgrad im Navbar-Bereich
 // @match        https://www.leitstellenspiel.de/*
 // @match        https://leitstellenspiel.de/*
-// @updateURL    https://github.com/Bobelle-Homebase/Leitstelle-Bielefeld/blob/main/Credits%20Counter%20(Navibar)%201.0.0.user
-// @downloadURL  https://github.com/Bobelle-Homebase/Leitstelle-Bielefeld/blob/main/Credits%20Counter%20(Navibar)%201.0.0.user
-// @grant        GM_setValue
+// @updateURL    Dashboard Credits Counter (Bielefeld Edition)-3.9.11.user.js
+// @downloadURL  Dashboard Credits Counter (Bielefeld Edition)-3.9.11.user.js
 // @grant        GM_getValue
 // @grant        GM_addStyle
 // @run-at       document-idle
