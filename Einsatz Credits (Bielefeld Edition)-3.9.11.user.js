@@ -7,7 +7,8 @@
 // @match        https://www.leitstellenspiel.de/*
 // @match        https://leitstellenspiel.de/*
 // @grant        none
-
+// @updateURL    Einsatz Credits (Bielefeld Edition)-3.9.11.user.js
+// @downloadURL  Einsatz Credits (Bielefeld Edition)-3.9.11.user.js
 // ==/UserScript==
 (function () {
     'use strict';
