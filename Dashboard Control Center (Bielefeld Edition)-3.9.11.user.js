@@ -340,6 +340,7 @@
         { n: "SEG GW Wasserrettung", c: "#FFD7A8", s: ["wasserrettung"], cat: "SEG" },
         { n: "SEG GW Taucher", c: "#FFD7A8", s: ["taucher"], cat: "SEG" },
         { n: "SEG MZB", c: "#FFD7A8", s: ["mzb", "boot"], cat: "SEG" },
+        { n: "GW Verpflegung", c: "#FF0000", s: ["verpflegung", "gwverpflegung"], cat: "SEG" },
         // Drohne
         { n: "ELW 2 Drohne", c: "#CCCCCC", cat: "Drohne" },
         { n: "ELW Drohne", c: "#CCCCCC", cat: "Drohne" },
