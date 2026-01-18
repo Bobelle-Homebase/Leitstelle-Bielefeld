@@ -254,7 +254,7 @@
         { n: "AB Tank", c: "#FF0000", s: ["abtank"], cat: "FW" },
         { n: "AB Wasser/Schaum", c: "#FF0000", s: ["abwasser"], cat: "FW" },
         { n: "Anh Lüfter", c: "#FF0000", s: ["anhlüfter"], cat: "FW" },
-        { n: "Anh Anh FKH", c: "#FF0000", s: ["anhfkh"], cat: "FW" },
+        
         // Werkfeuerwehr
         { n: "GW Werkfeuerwehr", c: "#D44444", s: ["werkfeuerwehr"], cat: "WerkFW" },
         { n: "TM50", c: "#D44444", s: ["tm50", "teleskop"], cat: "WerkFW" },
@@ -331,7 +331,8 @@
         { n: "SEG GW UAS", c: "#FFD7A8", s: ["gwuas"], cat: "SEG" },
         { n: "SEG Bt Kombi", c: "#FFD7A8", s: ["btkombi"], cat: "SEG" },
         { n: "SEG Bt LKW", c: "#FFD7A8", s: ["btlkw"], cat: "SEG" },
-        { n: "SEG FKH", c: "#FFD7A8", s: ["fkh"], cat: "SEG" },
+        
+        { n: "SEG Anh FKH", c: "#FFD7A8", s: ["anhfkh"], cat: "SEG" },
         { n: "SEG GW Bt", c: "#FFD7A8", s: ["gwbt"], cat: "SEG" },
         { n: "SEG Anh TeSi", c: "#FFD7A8", s: ["tesi"], cat: "SEG" },
         { n: "SEG GW TeSi", c: "#FFD7A8", s: ["gwtesi"], cat: "SEG" },
@@ -340,7 +341,6 @@
         { n: "SEG GW Wasserrettung", c: "#FFD7A8", s: ["wasserrettung"], cat: "SEG" },
         { n: "SEG GW Taucher", c: "#FFD7A8", s: ["taucher"], cat: "SEG" },
         { n: "SEG MZB", c: "#FFD7A8", s: ["mzb", "boot"], cat: "SEG" },
-        { n: "GW Verpflegung", c: "#FF0000", s: ["verpflegung", "gwverpflegung"], cat: "SEG" },
         // Drohne
         { n: "ELW 2 Drohne", c: "#CCCCCC", cat: "Drohne" },
         { n: "ELW Drohne", c: "#CCCCCC", cat: "Drohne" },
