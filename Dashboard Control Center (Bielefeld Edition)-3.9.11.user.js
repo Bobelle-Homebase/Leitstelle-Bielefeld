@@ -234,7 +234,7 @@
         { n: "GW Oel/Umwelt", c: "#FF0000", s: ["oel", "öl", "umwelt", "gwo"], cat: "FW" },
         { n: "GW Schlauch", c: "#FF0000", s: ["schlauch", "gws"], cat: "FW" },
         { n: "GW Lüfter", c: "#FF0000", s: ["lüfter", "gwlüfter"], cat: "FW" },
-        { n: "GW Verpflegung", c: "#FF0000", s: ["verpflegung", "gwverpflegung"], cat: "FW" },
+        { n: "GW Verpflegung", c: "#FF0000", s: ["gw","verpflegung", "gwverpflegung"], cat: "FW" },
         { n: "AB Atemschutz", c: "#FF0000", s: ["abatemschutz", "aba"], cat: "FW" },
         { n: "AB Dekon-P", c: "#FF0000", s: ["abdekon"], cat: "FW" },
         { n: "AB Einsatzleitung", c: "#FF0000", s: ["abeinsatz", "abelw"], cat: "FW" },
