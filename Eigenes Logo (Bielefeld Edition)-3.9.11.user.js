@@ -7,8 +7,8 @@
 // @description  Blendet das Original-Logo aus und legt ein eigenes darüber
 // @match        https://www.leitstellenspiel.de/*
 // @match        https://leitstellenspiel.de/*
-// @updateURL          https://github.com/Bobelle-Homebase/Leitstelle-Bielefeld/raw/refs/heads/main/Dashboard%20Control%20Center%20(Bielefeld%20Edition)-3.9.11.user.js
-// @downloadURL        https://github.com/Bobelle-Homebase/Leitstelle-Bielefeld/raw/refs/heads/main/Dashboard%20Control%20Center%20(Bielefeld%20Edition)-3.9.11.user.js
+// @updateURL    Eigenes Logo (Bielefeld Edition)-3.9.11.user.js
+// @downloadURL  Eigenes Logo (Bielefeld Edition)-3.9.11.user.js
 // @grant        GM_addStyle
 // @run-at       document-idle
 // ==/UserScript==
