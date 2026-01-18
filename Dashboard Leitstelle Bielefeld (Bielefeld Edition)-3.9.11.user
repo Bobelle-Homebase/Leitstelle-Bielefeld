@@ -7,8 +7,8 @@
 // @description  Zeigt die Leitstelle
 // @match        https://leitstellenspiel.de/*
 // @match        https://www.leitstellenspiel.de/*
-// @updateURL    https://raw.githubusercontent.com/Bobelle-Homebase/Leitstelle-Bielefeld/refs/heads/main/Leitstelle%20Bielefeld%201.0.0.user
-// @downloadURL  https://raw.githubusercontent.com/Bobelle-Homebase/Leitstelle-Bielefeld/refs/heads/main/Leitstelle%20Bielefeld%201.0.0.user
+// @updateURL    Dashboard Leitstelle Bielefeld (Bielefeld Edition)-3.9.11.user
+// @downloadURL  Dashboard Leitstelle Bielefeld (Bielefeld Edition)-3.9.11.user
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_deleteValue
