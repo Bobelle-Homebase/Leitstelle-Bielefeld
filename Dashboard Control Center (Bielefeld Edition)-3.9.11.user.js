@@ -3,7 +3,7 @@
 // @namespace          https://leitstellenspiel.de/bielefeld
 // @version            3.9.16
 // @license            Design by Bobelle
-// @author             Design by Bobelle (Mod by User, cleaned & fixed)
+// @author             Design by Bobelle
 // @description        V3.9.16-fixed: Pat/Gef/Betreuung (Blau blinkend), Alarme (Rot blinkend), Fzg (Status-Farben), Typos fixed.
 // @match              https://www.leitstellenspiel.de/*
 // @match              https://leitstellenspiel.de/*
