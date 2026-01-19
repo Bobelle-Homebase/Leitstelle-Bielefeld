@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name               Dashboard Control Center (Bielefeld Edition)
 // @namespace          https://leitstellenspiel.de/bielefeld
-// @version            3.9.15
+// @version            3.9.16
 // @license            Design by Bobelle
-// @author             Design by Bobelle (Mod by User, cleaned by ChatGPT)
-// @description        V3.9.15-clean: Pat/Gef/Betreuung (Blau blinkend), Alarme (Rot blinkend), Fzg (Status-Farben).
+// @author             Design by Bobelle (Mod by User, cleaned & fixed)
+// @description        V3.9.16-fixed: Pat/Gef/Betreuung (Blau blinkend), Alarme (Rot blinkend), Fzg (Status-Farben), Typos fixed.
 // @match              https://www.leitstellenspiel.de/*
 // @match              https://leitstellenspiel.de/*
 // @match              https://www.missionchief.com/*
@@ -20,27 +20,23 @@
   "use strict";
 
   // =========================================================================
-  // 0) Gruppen
+  // 0) Gruppen & Konfiguration
   // =========================================================================
   const GROUP_LOGISTICS = ["Betreuung/Versorgung", "Patienten", "Gefangene"];
 
+  // Hier können Alarm-Stichwörter definiert werden, die rot blinken sollen
   const GROUP_ALARMS = [
     //"FFW Vollalarm",
     //"SEG Vollalarm",
     //"THW Vollalarm",
-    //"AB Vollalarm",
     //"Katastrophenalarm Bielefeld",
-    //"BergRett Vollalarm",
-    //"SeeRett Vollalarm",
-    //"WasserRett Vollalarm",
-    //"ABC Vollalarm",
   ];
 
   // =========================================================================
-  // 1) Konstanten / Mapping
+  // 1) Konstanten / ID-Mapping (Spiel-Interne IDs zu Fahrzeugnamen)
   // =========================================================================
   const TYPE_ID_MAPPING = {
-    0: ["LF 20", "HLF 20", "HLF 10", "LF 10", "LF 16-TS", "LF 8/6"],
+    0: ["LF 20", "HLF 20", "LF 10", "LF 16-TS", "LF 8/6"],
     1: ["LF 10"],
     2: ["DLK"],
     3: ["ELW 1"],
@@ -184,7 +180,7 @@
     winBorderC: "#e9ecef",
     winBorderW: 1,
     winRadius: 0,
-    headBg: "#dce1e0", // Titelbar-Farbe
+    headBg: "#dce1e0",
     headColor: "#343a40",
     headSize: 15,
     headAlign: "left",
@@ -204,6 +200,7 @@
     tileSortOrder: "category", // "category" | "alphabetical"
   };
 
+  // Normalisierung: alles klein, keine Sonderzeichen
   const normalize = (s) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
   // Hauptseite erkennen
@@ -213,28 +210,21 @@
     (path === "/" || path === "/index" || path.length < 2);
 
   // =========================================================================
-  // 2) Kacheldefinitionen
-  //    -> Aufgeräumt: removed unused filters (activeCategoryFilter/searchFilter)
+  // 2) Kacheldefinitionen (Matching Logic)
   // =========================================================================
   const CATEGORY_ORDER = [
-    "FW",
-    "RD",
-    "POL",
-    "THW",
-    "SEG",
-    "WerkFW",
-    "FlugFW",
-    "Drohne",
-    "Wasser/Berg",
-    "Netz",
-    "Kat",
-    "Sonstiges",
+    "FW", "RD", "POL", "THW", "SEG", "WerkFW", "FlugFW", "Drohne",
+    "Wasser/Berg", "Netz", "Kat", "Sonstiges",
   ];
   const categoryOrderMap = new Map(CATEGORY_ORDER.map((cat, i) => [cat, i]));
 
-  // Roh-Definition
+  // Liste der Buttons/Kacheln
+  // 'n': Name (Anzeige)
+  // 'c': Farbe (Rand links)
+  // 's': Suchbegriffe (für Text-Matching beim Klick oder API-Abgleich)
+  // 'cat': Kategorie für Sortierung
   const AAO_TILES_RAW = [
-    // FW
+    // --- FEUERWEHR ---
     { n: "ELW 1", c: "#FF0000", s: ["elw1", "einsatzleitwagen1"], cat: "FW" },
     { n: "ELW 2", c: "#FF0000", s: ["elw2", "einsatzleitwagen2"], cat: "FW" },
     { n: "HLF 20", c: "#FF0000", s: ["hlf20", "hlf10", "hilfeleistungs", "hlf"], cat: "FW" },
@@ -248,8 +238,8 @@
     { n: "PTLF", c: "#FF0000", s: ["ptlf", "pulver", "ptlf4000"], cat: "FW" },
     { n: "FwK", c: "#FF0000", s: ["fwk", "kran", "feuerwehrkran"], cat: "FW" },
     { n: "Dekon-P", c: "#FF0000", s: ["dekon", "dekonp"], cat: "FW" },
-    { n: "MTW Mannschaft", c: "#FF0000", s: ["mtw", "mannschaft"], cat: "FW" },
-    { n: "MTW Verpflegung", c: "#FF0000", s: ["mtw", "verpflegung"], cat: "FW" },
+    { n: "MTW Mannschaft", c: "#FF0000", s: ["mtw", "mannschaft", "mtwmannschaft"], cat: "FW" },
+    { n: "MTW Verpflegung", c: "#FF0000", s: ["mtw", "verpflegung", "mtwverpflegung"], cat: "FW" },
     { n: "SLF", c: "#FF0000", s: ["slf", "sonderlöschfahrzeug", "sonderlösch"], cat: "FW" },
     { n: "WLF", c: "#FF0000", s: ["wlf", "wechsellader"], cat: "FW" },
     { n: "GW Atemschutz", c: "#FF0000", s: ["atemschutz", "gwa"], cat: "FW" },
@@ -264,6 +254,7 @@
     { n: "GW Lüfter", c: "#FF0000", s: ["lüfter", "gwlüfter"], cat: "FW" },
     { n: "GW Verpflegung", c: "#FF0000", s: ["gw", "verpflegung", "gwverpflegung"], cat: "FW" },
 
+    // Abrollbehälter FW
     { n: "AB Atemschutz", c: "#FF0000", s: ["abatemschutz", "aba"], cat: "FW" },
     { n: "AB Dekon-P", c: "#FF0000", s: ["abdekon"], cat: "FW" },
     { n: "AB Einsatzleitung", c: "#FF0000", s: ["abeinsatz", "abelw"], cat: "FW" },
@@ -285,21 +276,21 @@
     { n: "Anh Lüfter", c: "#FF0000", s: ["anhlüfter", "lüfter", "anh"], cat: "FW" },
     { n: "Anh Sonderlöschmittel", c: "#FF0000", s: ["anhsonderlöschmittel", "sonderlöschmittel", "anh"], cat: "FW" },
 
-    // Werkfeuerwehr
+    // --- WERKFEUERWEHR ---
     { n: "GW Werkfeuerwehr", c: "#D44444", s: ["werkfeuerwehr"], cat: "WerkFW" },
     { n: "TM50", c: "#D44444", s: ["tm50", "teleskop"], cat: "WerkFW" },
     { n: "Turbolöscher", c: "#D44444", s: ["turbo"], cat: "WerkFW" },
     { n: "ULF mit Löscharm", c: "#D44444", s: ["ulf", "löscharm"], cat: "WerkFW" },
 
-    // Flughafenfeuerwehr
+    // --- FLUGHAFEN ---
     { n: "FLF", c: "#D44444", s: ["flf", "flugfeldlöschfahrzeug"], cat: "FlugFW" },
-    { n: "Rettungtreppe", c: "#D44444", s: ["rettungtreppe"], cat: "FlugFW" },
+    { n: "Rettungstreppe", c: "#D44444", s: ["rettungstreppe", "rettungtreppe"], cat: "FlugFW" },
 
-    // FW allgemein
+    // --- SCHIENE ---
     { n: "HLF Schiene", c: "#D44444", s: ["hlfschiene"], cat: "FW" },
     { n: "RW Schiene", c: "#D44444", s: ["rwschiene"], cat: "FW" },
 
-    // RD
+    // --- RETTUNGSDIENST ---
     { n: "KTW", c: "#FF9D0A", s: ["ktw", "kranken"], cat: "RD" },
     { n: "NEF", c: "#FF9D0A", s: ["nef", "notarzt"], cat: "RD" },
     { n: "NAW", c: "#FF9D0A", s: ["naw"], cat: "RD" },
@@ -313,7 +304,7 @@
     { n: "KdoW LNA", c: "#FF9D0A", s: ["lna", "leitender"], cat: "RD" },
     { n: "KdoW OrgL", c: "#FF9D0A", s: ["orgl", "organisatorischer"], cat: "RD" },
 
-    // POL
+    // --- POLIZEI ---
     { n: "LPol FuStW", c: "#54B509", s: ["fustw", "lpol", "funkstreifenwagen", "streifenwagen"], cat: "POL" },
     { n: "LPol FuStW DGL", c: "#54B509", s: ["dgl"], cat: "POL" },
     { n: "LPol FuStW Zivil", c: "#54B509", s: ["zivil"], cat: "POL" },
@@ -337,7 +328,7 @@
     { n: "BP Pferdetransporter klein", c: "#54B509", s: ["pferdetransport", "pferdetransportklein"], cat: "POL" },
     { n: "BP Anh Pferdetransport", c: "#54B509", s: ["pferdetransport", "anhpferdetransport"], cat: "POL" },
 
-    // THW
+    // --- THW ---
     { n: "Schmutzwasserpumpen", c: "#0571FF", s: ["schmutz"], cat: "THW" },
     { n: "THW BRmG R", c: "#0571FF", s: ["brmg"], cat: "THW" },
     { n: "THW GKW", c: "#0571FF", s: ["gkw", "gerätekraftwagen"], cat: "THW" },
@@ -363,7 +354,7 @@
     { n: "THW Anh 12 Lbw (FGr Log-V)", c: "#0571FF", s: ["anh12lbw"], cat: "THW" },
     { n: "THW Anh FüLa", c: "#0571FF", s: ["füla"], cat: "THW" },
 
-    // SEG
+    // --- SEG ---
     { n: "SEG Rettungshundefahrzeug", c: "#FFD7A8", s: ["hund"], cat: "SEG" },
     { n: "KTW Typ-B", c: "#FFD7A8", s: ["ktwb", "ktw b", "seg ktw"], cat: "SEG" },
     { n: "SEG GW San", c: "#FFD7A8", s: ["gwsan"], cat: "SEG" },
@@ -381,12 +372,12 @@
     { n: "SEG GW Taucher", c: "#FFD7A8", s: ["taucher"], cat: "SEG" },
     { n: "SEG MZB", c: "#FFD7A8", s: ["mzb", "boot"], cat: "SEG" },
 
-    // Drohne
+    // --- DROHNE ---
     { n: "ELW 2 Drohne", c: "#CCCCCC", s: ["drohne"], cat: "Drohne" },
     { n: "ELW Drohne", c: "#CCCCCC", s: ["drohne"], cat: "Drohne" },
     { n: "MTF Drohne", c: "#CCCCCC", s: ["drohne"], cat: "Drohne" },
 
-    // Wasser/Berg
+    // --- WASSER / BERG ---
     { n: "GW Taucher", c: "#8CBAFF", s: ["taucher"], cat: "Wasser/Berg" },
     { n: "GW Wasserrettung", c: "#8CBAFF", s: ["wasserrettung"], cat: "Wasser/Berg" },
     { n: "MZB", c: "#8CBAFF", s: ["mzb", "boot"], cat: "Wasser/Berg" },
@@ -394,13 +385,13 @@
     { n: "Seenotrettungskreuzer", c: "#8CBAFF", s: ["seenot"], cat: "Wasser/Berg" },
     { n: "SAR mit Winde", c: "#8CBAFF", s: ["sar", "winde"], cat: "Wasser/Berg" },
     { n: "GW Bergrettung", c: "#B0AC97", s: ["bergrettung", "bergwacht"], cat: "Wasser/Berg" },
-    { n: "GW Bergrettung NEF)", c: "#B0AC97", s: ["bergrettungnef"], cat: "Wasser/Berg" },
+    { n: "GW Bergrettung (NEF)", c: "#B0AC97", s: ["bergrettungnef"], cat: "Wasser/Berg" },
     { n: "ATV", c: "#B0AC97", s: ["atv"], cat: "Wasser/Berg" },
     { n: "Anh Höhenrettung", c: "#B0AC97", s: ["höhenrettung"], cat: "Wasser/Berg" },
     { n: "ELW Bergrettung", c: "#B0AC97", s: ["elwbergrettung"], cat: "Wasser/Berg" },
     { n: "Schneefahrzeug", c: "#B0AC97", s: ["schnee"], cat: "Wasser/Berg" },
 
-    // Sonstiges (noStatus)
+    // --- SONSTIGES (Logistik / Counter) ---
     {
       n: "Patienten",
       c: "#000000",
@@ -425,7 +416,7 @@
       noStatus: true,
     },
 
-    // Netz
+    // --- NETZ (Strom) ---
     { n: "NEA50 (Beliebige HiOrg)", c: "#FFD7A8", s: ["nea50", "netz"], cat: "Netz" },
     { n: "NEA200 (Beliebige HiOrg)", c: "#0571FF", s: ["nea200", "netz"], cat: "Netz" },
     { n: "Anh NEA50", c: "#0571FF", s: ["anhnea50", "netz"], cat: "Netz" },
@@ -435,7 +426,7 @@
       b.n.length + (b.s || []).join("").length - (a.n.length + (a.s || []).join("").length)
   );
 
-  // Precomputed tile lists/maps
+  // Optimierte Such-Liste (Vorberechnung)
   const TILE_LIST = AAO_TILES_RAW.map((t) => ({
     ...t,
     norm: normalize(t.n),
@@ -445,7 +436,7 @@
   const tileMetaByKey = Object.fromEntries(AAO_TILES_RAW.map((t) => [t.n, t]));
 
   // =========================================================================
-  // 3) Storage/State
+  // 3) Storage/State Management
   // =========================================================================
   const json = {
     load(key, fallback) {
@@ -495,7 +486,7 @@
     det: json.load(STORAGE.DETAILS_TODAY, {}),
   };
 
-  // Availability
+  // Availability Caches
   let vehicleAvailability = {};
   let vehicleExists = {};
   let lastUpdateTime = "";
@@ -539,7 +530,7 @@
   }
 
   // =========================================================================
-  // 5) Tages-Reset
+  // 5) Tages-Reset Logic
   // =========================================================================
   function checkVehicleDayReset() {
     const today = getTodayString();
@@ -580,6 +571,7 @@
     let best = null;
     let bestLen = -1;
 
+    // Suche das längste passende Match
     for (const t of TILE_LIST) {
       if (t.norm && rawText.includes(t.norm) && t.norm.length > bestLen) {
         best = t.n;
@@ -601,17 +593,12 @@
   let fzWrapper = null;
   let uiRoot = null;
   let tileEls = {};
-
-  // important: redrawGrid is used from multiple places -> global function ref
   let redrawGrid = () => {};
-
   let animFrameId = null,
     hideStartTime = null,
     hideDuration = 0,
     safeHideTimer = null,
     isHovering = false;
-
-  // dragging state
   let vKeyPressed = false;
   let isDragging = false;
   let dragStartX = 0,
@@ -1605,6 +1592,7 @@
       let fms = v.fms_real ?? v.fms ?? null;
       const fmsText = (v.fms_text || "").toLowerCase();
 
+      // FMS Fallback bei API Unklarheiten
       if (!fms || fms === 0) {
         if (fmsText.includes("frei auf wache") || fmsText.includes("at the station")) fms = 1;
         else if (fmsText.includes("frei auf funk") || fmsText.includes("available on radio")) fms = 2;
@@ -1618,10 +1606,11 @@
 
       if (fms && statusVehicleLists[fms]) statusVehicleLists[fms].push(v.caption);
 
+      // Match über ID
       const mappedKeys = TYPE_ID_MAPPING[typeId];
       if (mappedKeys) mappedKeys.forEach(setExist);
 
-      // match by name/search terms
+      // Match über Namen/Suchbegriffe
       for (const t of TILE_LIST) {
         if (t.norm && (vNameCustom.includes(t.norm) || vNameType.includes(t.norm))) setExist(t.n);
         for (const sTerm of t.search) {
@@ -1629,7 +1618,7 @@
         }
       }
 
-      // available = fms 1/2
+      // Verfügbarkeit = FMS 1 oder 2
       if (fms === 1 || fms === 2) {
         if (mappedKeys) mappedKeys.forEach(setAvail);
         for (const t of TILE_LIST) {
@@ -1641,7 +1630,7 @@
       }
     }
 
-    // GRTW derived tiles
+    // Sonderlogik GRTW
     if (vehicleExists["GRTW"]) {
       vehicleExists["GRTW (3 Pat.mit NA)"] = true;
       vehicleExists["GRTW (7 Pat.ohne NA)"] = true;
@@ -1651,11 +1640,13 @@
       vehicleAvailability["GRTW (7 Pat.ohne NA)"] = true;
     }
 
-    // always exist/avail (manual counters)
+    // Manuelle Zähler immer "da"
     vehicleExists["Patienten"] = true;
     vehicleAvailability["Patienten"] = true;
     vehicleExists["Gefangene"] = true;
     vehicleAvailability["Gefangene"] = true;
+    vehicleExists["Betreuung/Versorgung"] = true;
+    vehicleAvailability["Betreuung/Versorgung"] = true;
 
     for (const k of KEYS) updateTile(k);
     renderAvailabilityIndicator();
@@ -1669,7 +1660,7 @@
   }
 
   // =========================================================================
-  // 9) Counter Increment
+  // 9) Counter Increment (Klick-Verarbeitung)
   // =========================================================================
   function incrementTileCount(vehicleKey, activeEl) {
     if (!vehicleKey) return;
@@ -1703,7 +1694,7 @@
   // =========================================================================
   // 10) Events
   // =========================================================================
-  // Key listeners for "V"
+  // Key listeners for "V" (Drag)
   document.addEventListener("keydown", (e) => {
     if (e.key.toLowerCase() === "v") vKeyPressed = true;
   });
@@ -1735,7 +1726,7 @@
     saveUI();
   });
 
-  // Click tracking
+  // Click tracking global
   const VALID_CLICK_AREA_SELECTOR =
     "#mission_aao, .vehicle_select_table, .aao, #mission-window, .aao-grid, .mission_panel_content, .missionMap, #vehicle_table, .vehicle-table, .mission-vehicles";
 
@@ -1780,7 +1771,7 @@
         return;
       }
 
-      // only in valid areas
+      // Nur in gültigen Bereichen zählen (AAO, Fahrzeugliste)
       if (!activeEl.closest(VALID_CLICK_AREA_SELECTOR)) return;
 
       const key = identifyClick(activeEl);
@@ -1788,6 +1779,7 @@
 
       incrementTileCount(key, activeEl);
 
+      // Spezialfall Katastrophenalarm
       if (key === "Katastrophenalarm Bielefeld") {
         if (isMainPage) showKataAlert();
 
@@ -1825,7 +1817,7 @@
     }
   }, 1000);
 
-  // periodic availability update
+  // Periodic availability update (2 Min)
   setInterval(updateAvailability, 120000);
 
   // =========================================================================
